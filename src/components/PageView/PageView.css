@@ -1,0 +1,33 @@
+.thumbnail {
+    border: 2px solid #ccc;
+    cursor: pointer;
+    padding: 4px;
+    user-select: none;
+    /* userSelect: none; */
+    transition: border 0.3s; /* Smooth transition for border color change */
+  }
+  
+  .thumbnail:hover {
+    border: 2px solid blue; /* Change border color on hover */
+  }
+  
+
+.rectangle {
+    position: absolute;
+    border: 2px solid blue; /* Adjust border properties as needed */
+  }
+  
+  /* .container {
+    overflow: visible; /* Allow scrolling within the container */
+    /* border: 2px solid red;
+    position: relative;
+  } */
+  
+  /* .container-crosshair {
+    cursor: crosshair;
+  } */
+  
+  /* .container-auto {
+    cursor: auto;
+  } */ 
+  
