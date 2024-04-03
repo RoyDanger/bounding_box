@@ -9,7 +9,6 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MdKeyboardBackspace } from "react-icons/md";
-import './PageView.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.min.js',
@@ -59,10 +58,7 @@ const PageView = () => {
 
     useEffect(() => {
         const handleMouseMove = (event) => {
-            // console.log('Mouse Position: ', {x: event.clientX, y: event.clientY});
-            // if (scrollFixed !== 0){
-                // console.log('Mo.use position:', { x: event.clientX, y: event.clientY });
-            // }
+            console.log('Mouse Position: ', {x: event.clientX, y: event.clientY}, "selected rectangle::",rectangles);
         };
     
         window.addEventListener('mousemove', handleMouseMove);
@@ -70,7 +66,7 @@ const PageView = () => {
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
         };
-    }, []); // Empty dependency array to run the effect only once
+    }, [rectangles]); // Empty dependency array to run the effect only once
     
 
 
@@ -151,13 +147,16 @@ const PageView = () => {
     }
 
     const hadleEditOnClick = (e) => {
+        if (handleEditFlag){
+            setIsAddingArea(true);
+        }
         // console.log("coordinates::",e.clientX,e.clientY)
         // console.log("click button Edditing",handleClickCount);
         if (handleEditFlag1){
             const a = handleClickCount + 1;
             setHandleClickCount(a);
         }
-        if (handleClickCount >= 1 && setHandleEditFlag1){
+        if (handleClickCount >= 1 && handleEditFlag1){
             setHandleEditFlag1(false);
             setHandleClickCount(0);
             const pageCanvas = document.querySelector('.react-pdf__Page__canvas');
@@ -207,7 +206,6 @@ const PageView = () => {
                 setDrawingRectangle(r);
             }
         }
-        setIsAddingArea(true);
     }
 
     const handleMouseDown = (e) => {
@@ -298,7 +296,7 @@ const PageView = () => {
                 height: 0});
             // Re-enable text selection
             document.body.style.userSelect = '';
-        }else{
+        }else if (isAddingArea && editRectangleActiveIndex !== -1){
             const newRectangle = {
                 x: startPosition.x,
                 y: startPosition.y,
@@ -338,7 +336,7 @@ const PageView = () => {
     // Pass PID and BoundingBoxId to generateTxtFileFromObject function
     const handleGenerateImage = () => {
     if (selectedRectangle) {
-        generateImage(currentPage, selectedRectangle); // Assuming generateImage updates state that triggers TXT file generation
+        generateImage(); // Assuming generateImage updates state that triggers TXT file generation
 
         const pageIndicesMap = pageNumbers.reduce((acc, pageNumber, index) => {
             if (!acc[pageNumber]) {
@@ -353,7 +351,7 @@ const PageView = () => {
         const allData = {}
 
         for (const [pageNumber, indices] of Object.entries(pageIndicesMap)) {
-            const c = pageCanvases[pageNumber].getBoundingClientRect();
+            const c = pageCanvases[pageNumber].getBoundingClientRect()
             const a = indices.map((rectangleIndex, index) => {
                 const rectangle = rectangles[rectangleIndex] 
                 return {
@@ -385,6 +383,32 @@ const PageView = () => {
     }
 };
     
+
+    const generatePDF = (pageNumber, rectangle) => {
+        if (pageNumber && rectangle) {
+            // Get the page container element
+            const pageContainer = document.querySelector('.react-pdf__Page__textContent');
+
+            // Check if the page container exists
+            if (pageContainer) {
+                // Convert HTML content to an image using html2canvas
+                html2canvas(pageContainer).then(canvas => {
+                    // Create a new jsPDF instance
+                    const doc = new jsPDF();
+
+                    // Add the image of the page content to the PDF
+                    doc.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', 10, 10, 190, 277);
+
+                    // Save the PDF
+                    doc.save(`page_${pageNumber}_coming_soon.pdf`);
+                });
+            } else {
+                console.error('Page container not found.');
+            }
+        } else {
+            console.error('Invalid page number or rectangle.');
+        }
+    };
 
     const generateTxtFileFromObject = (rectangleData) => {
 
@@ -483,8 +507,13 @@ const PageView = () => {
         }
     };
     
+    
+    
+
+    
 
     const containerStyle = {
+        userSelect: 'none',
         cursor: isAddingArea ? 'crosshair' : 'auto',
         overflow: 'visible', // Allow scrolling within the container
         border: '2px solid red',
@@ -549,15 +578,20 @@ const PageView = () => {
         if (!numPages) return null;
     
         let startIndex, endIndex;
+
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+        // console.log("scrollbar::",scrollX,scrollY);
     
         if (singlePageView) {
             // Detailed view for a single page
             return (
                 <div style={containerStyle} onDoubleClick={() => setSinglePageView(false)}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onClick={hadleEditOnClick}>
+                     onMouseDown={handleMouseDown}
+                     onMouseMove={handleMouseMove}
+                     onMouseUp={handleMouseUp}
+                     onClick={hadleEditOnClick}>
                     <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
                         <Page pageNumber={currentPage} scale={scale} />
                     </Document>
@@ -569,34 +603,21 @@ const PageView = () => {
             const pageCount = Math.ceil(numPages / pagesPerRow);
             startIndex = (currentPage - 1) * pagesPerRow;
             endIndex = Math.min(startIndex + pagesPerRow, numPages);
-    
+
             return (
                 <div className="thumbnails-container" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '10px' }}> {/* Adjusted to include gap */}
                     {Array.from({ length: endIndex - startIndex }, (_, index) => {
                         const pageNumber = startIndex + index + 1;
                         return (
-                            <div key={`thumbnail_${pageNumber}`}
-                                className="thumbnail"
-                                onDoubleClick={() => handleThumbnailClick(pageNumber)}
-                                // style={{
-                                //     border: '1px solid #ccc',
-                                //     cursor: 'pointer',
-                                //     padding: '4px',
-                                //     userSelect: 'none',
-                                //     transition: 'border 0.3s', // Smooth transition for border color change
-                                // }}
-                                // onMouseEnter={e => e.target.style.border = '2px solid blue'} // Change border color on hover
-                                // onMouseLeave={e => e.target.style.border = ''} // Revert border color on mouse leave
-                            >
+                            <div key={`thumbnail_${pageNumber}`} className="thumbnail" onDoubleClick={() => handleThumbnailClick(pageNumber)} style={{ border: '2px solid #ccc', cursor: 'pointer', padding: '4px', userSelect: 'none' }}> {/* Added inline styles */}
                                 <Page pageNumber={pageNumber} width={200} />
                             </div>
-                        );
-                    })}
-                </div>
+            );
+        })}
+    </div>
             );
         }
     };
-    
 
     const handleEdit = (e) =>{
         setHandleEditFlag(true);
@@ -604,11 +625,14 @@ const PageView = () => {
     }
     
     
-    // // CSS styles for rectangles
-    // const rectangleStyle = {
-    //     position: 'absolute',
-    //     border: '2px solid blue', // Adjust border properties as needed
-    // };
+    
+    
+
+    // CSS styles for rectangles
+    const rectangleStyle = {
+        position: 'absolute',
+        border: '2px solid blue', // Adjust border properties as needed
+    };
 
     const [scrollX, setScrollX] = useState(window.pageXOffset || document.documentElement.scrollLeft);
     const [scrollY, setScrollY] = useState(window.pageYOffset || document.documentElement.scrollTop);
