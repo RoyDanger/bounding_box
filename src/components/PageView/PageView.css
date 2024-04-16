@@ -38,3 +38,25 @@
 /* .container-auto {
   cursor: auto;
 } */ 
+
+.backspace-icon-container {
+  display: inline-block;
+  position: relative;
+}
+
+.backspace-icon {
+  color: #000000; /* Custom color */
+  font-size: 24px; /* Custom size */
+  transition: transform 0.3s ease; /* Hover animation */
+}
+
+.backspace-icon:hover {
+  transform: scale(1.2); /* Scale up on hover */
+}
+
+.buttonHover:hover {
+  /* Define your hover effect styles here */
+  background-color: lightgray;
+  color: black;
+  border-color: black;
+}
