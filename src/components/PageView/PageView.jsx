@@ -253,127 +253,144 @@ const PageView = () => {
     }
 };
 
-    const generateImage = () => {
-        if (pageNumbers.length > 0 && rectangles.length > 0) {
-            const pdf = new jsPDF();
-            const pngDataUrls = {}; // Object to store PNG data URLs
-    
-            const pageIndicesMap = pageNumbers.reduce((acc, pageNumber, index) => {
-                if (!acc[pageNumber]) {
-                    acc[pageNumber] = []; // Initialize an array for the pageNumber if it doesn't exist
-                }
-                acc[pageNumber].push(index); // Push the index to the corresponding pageNumber array
-                return acc;
-            }, {});
-    
-            const cnavasPageN = Object.keys(pageCanvases).map(pageN => {
-                const n = parseInt(pageN, 10);
-                const canV = pageCanvases[n].getBoundingClientRect();
-                return canV.x > 0 && canV.y > 0 ? n : null;
-            }).filter(item => item !== null);
-    
-            for (const [pageNumber, indices] of Object.entries(pageIndicesMap)) {
-                const pageCanvas = pageCanvases[pageNumber];
-                if (pageCanvas) {
-                    const dpr = window.devicePixelRatio || 1;
-    
-                    const drawCanvas = document.createElement('canvas');
-                    drawCanvas.width = pageCanvas.width * dpr;
-                    drawCanvas.height = pageCanvas.height * dpr;
-                    const ctx = drawCanvas.getContext('2d');
-                    ctx.scale(dpr, dpr);
-                    ctx.drawImage(pageCanvas, 0, 0);
-    
-                    indices.forEach(index => {
-                        const pageCanvas1 = pageCanvases[cnavasPageN[0]];
-                        if (pageCanvas1) {
-                            const canvasCo = pageCanvas1.getBoundingClientRect();
-                            const rectangle = rectangles[index];
-                            const { x, y, width, height } = rectangle;
-    
-                            ctx.strokeStyle = 'blue';
-                            ctx.lineWidth = 2;
-    
-                            if (rectanglesScrollPoints[index] === 0) {
-                                ctx.strokeRect(Math.abs(x - canvasCo.x) * dpr, Math.abs(y - canvasCo.y - scrollY) * dpr, width * dpr, height * dpr);
-                            } else {
-                                ctx.strokeRect(Math.abs(x - canvasCo.x) * dpr, Math.abs(y - canvasCo.y - scrollY + rectanglesScrollPoints[index]) * dpr, width * dpr, height * dpr);
-                            }
-                        }
-                    });
-    
-                    const imageData = drawCanvas.toDataURL('image/png');
-                    pngDataUrls[pageNumber] = imageData.split(',')[1];
-                } else {
-                    console.error(`Page canvas not found for page ${pageNumber}.`);
-                }
+const generateImage = () => {
+    if (pageNumbers.length > 0 && rectangles.length > 0) {
+      const pdf = new jsPDF();
+      const pngDataUrls = {}; // Object to store PNG data URLs
+  
+      const pageIndicesMap = pageNumbers.reduce((acc, pageNumber, index) => {
+        if (!acc[pageNumber]) {
+          acc[pageNumber] = []; // Initialize an array for the pageNumber if it doesn't exist
+        }
+        acc[pageNumber].push(index); // Push the index to the corresponding pageNumber array
+        return acc;
+      }, {});
+  
+      const cnavasPageN = Object.keys(pageCanvases).map(pageN => {
+        const n = parseInt(pageN, 10);
+        const canV = pageCanvases[n].getBoundingClientRect();
+        return canV.x > 0 && canV.y > 0? n : null;
+      }).filter(item => item!== null);
+  
+      for (const [pageNumber, indices] of Object.entries(pageIndicesMap)) {
+        const pageCanvas = pageCanvases[pageNumber];
+        if (pageCanvas) {
+          const dpr = window.devicePixelRatio || 1;
+  
+          const drawCanvas = document.createElement('canvas');
+          drawCanvas.width = pageCanvas.width * dpr;
+          drawCanvas.height = pageCanvas.height * dpr;
+          const ctx = drawCanvas.getContext('2d');
+          ctx.scale(dpr, dpr);
+          ctx.drawImage(pageCanvas, 0, 0);
+  
+          indices.forEach(index => {
+            const pageCanvas1 = pageCanvases[cnavasPageN[0]];
+            if (pageCanvas1) {
+              const canvasCo = pageCanvas1.getBoundingClientRect();
+              const rectangle = rectangles[index];
+              const { x, y, width, height } = rectangle;
+  
+              ctx.strokeStyle = 'blue';
+              ctx.lineWidth = 2;
+  
+              if (rectanglesScrollPoints[index] === 0) {
+                ctx.strokeRect(Math.abs(x - canvasCo.x) * dpr, Math.abs(y - canvasCo.y - scrollY) * dpr, width * dpr, height * dpr);
+              } else {
+                ctx.strokeRect(Math.abs(x - canvasCo.x) * dpr, Math.abs(y - canvasCo.y - scrollY + rectanglesScrollPoints[index]) * dpr, width * dpr, height * dpr);
+              }
             }
-    
-            const generatePdfFromPngDataUrls = () => {
-                Object.keys(pngDataUrls).forEach((pageNumber, index) => {
-                    if (index > 0) {
-                        pdf.addPage();
-                    }
-                    const imageData = atob(pngDataUrls[pageNumber]);
-                    pdf.addImage(imageData, 'PNG', 0, 0, 210, 297);
-                });
-                pdf.save('document_with_rectangles.pdf');
-            };
-    
-            setTimeout(generatePdfFromPngDataUrls, 20);
+          });
+  
+          const imageData = drawCanvas.toDataURL('image/png');
+          pngDataUrls[pageNumber] = imageData.split(',')[1];
         } else {
-            console.error('Invalid page number or rectangles.');
+          console.error(`Page canvas not found for page ${pageNumber}.`);
         }
-    };
+      }
+  
+      const generatePdfFromPngDataUrls = () => {
+        Object.keys(pngDataUrls).forEach((pageNumber, index) => {
+          if (index > 0) {
+            pdf.addPage();
+          }
+          const imageData = atob(pngDataUrls[pageNumber]);
+          pdf.addImage(imageData, 'PNG', 0, 0, 210, 297);
+        });
+        pdf.save('document_with_rectangles.pdf');
+      };
+  
+      setTimeout(generatePdfFromPngDataUrls, 20);
+    } else {
+      console.error('Invalid page number or rectangles.');
+    }
+  };
 
-    const generateTxtFileFromObject = (rectangleData) => {
-
-        const textData = JSON.stringify({data:rectangleData}, null, 2);
-    
-        const blob = new Blob([textData], { type: 'text/plain' });
-        const downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(blob);
-        downloadLink.download =  "file.txt";
-    
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    };
+  const generateTxtFileFromObject = (rectangleData) => {
+    const textData = JSON.stringify({ data: rectangleData }, null, 2);
+    const blob = new Blob([textData], { type: 'text/plain' });
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.download = 'file.txt';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
          
-    const handleEdit = () => {
-        if (isDelete) {
-            setDeleteModeMessage("Delete Rectangle mode active. Delete or click 'Delete Rectangle' to deactivate.");
-            setTimeout(() => {
-                setDeleteModeMessage("");
-            }, 2000);
-            return;
-        }
-        // Toggle the edit flag to enable or disable edit mode
-        setHandleEditFlag(current => !current);  // This toggles the state
-        setHandleEditFlag1(current => !current); // Assuming handleEditFlag1 also needs to be toggled similarly
-        setIsAddingArea(false);
-        setSelectedRectangle(null);          
-        setIsResizing(true);                // Ensure resizing is turned off
-        setEditRectangleActiveIndex(-1);
-        if (!handleEditFlag) {
-            // Code to handle when entering edit mode
-            console.log("Entered edit mode");
-            setEditModeMessage("Entered edit mode");
-            setTimeout(() => {
-                setEditModeMessage("");
-            }, 2000);
-    
-        } else {
-            // Code to handle when exiting edit mode
-            console.log("Exited edit mode");
-            setEditModeMessage("Edit mode is deactivated.");
-            setTimeout(() => {
-                setEditModeMessage("");
-            }, 2000); //5 sec
-            resetAllStates();  // Ensure all states are reset when exiting edit mode
-        }
-    };
-
+  const handleEdit = () => {
+    if (isDelete) {
+      const index = deleteIndex;
+      console.log("rectangles before deletion", rectangles);
+      console.log("delete index:", deleteIndex);
+  
+      rectangles.splice(index, 1);
+      rectanglesScrollPoints.splice(index, 1);
+      rectanglesScrollPointsX.splice(index, 1);
+      pageNumbers.splice(index, 1);
+  
+      console.log("rectangles after deletion", rectangles);
+      console.log("pageNumbers:", pageNumbers);
+  
+      // Filter and reset page canvases if necessary
+      let filteredPageCanvas = Object.fromEntries(
+          Object.entries(pageCanvases).filter(([key, _]) => pageNumbers.includes(parseInt(key)))
+      );
+      setPageCanvases(filteredPageCanvas);
+  
+      // Reset adding area state to false after deletion
+      setIsAddingArea(false);
+      setIsDelete(false);  // Optionally reset delete mode as well here
+      setIsResizing(false);
+  
+      // Clear any message related to delete mode
+      setDeleteModeMessage("");
+    } else {
+      // Toggle the edit flag to enable or disable edit mode
+      setHandleEditFlag(current =>!current);  // This toggles the state
+      setHandleEditFlag1(current =>!current); // Assuming handleEditFlag1 also needs to be toggled similarly
+      setIsAddingArea(false);
+      setSelectedRectangle(null);          
+      setIsResizing(true);                // Ensure resizing is turned off
+      setEditRectangleActiveIndex(-1);
+      if (!handleEditFlag) {
+        // Code to handle when entering edit mode
+        console.log("Entered edit mode");
+        setEditModeMessage("Entered edit mode");
+        setTimeout(() => {
+          setEditModeMessage("");
+        }, 2000);
+  
+      } else {
+        // Code to handle when exiting edit mode
+        console.log("Exited edit mode");
+        setEditModeMessage("Edit mode is deactivated.");
+        setTimeout(() => {
+          setEditModeMessage("");
+        }, 2000); //5 sec
+        resetAllStates();  // Ensure all states are reset when exiting edit mode
+      }
+    }
+  };
     const handleEditOnClick = (e) => {
         if (isDelete) {
             const index = deleteIndex;
@@ -539,12 +556,12 @@ const PageView = () => {
 
     const generateId = () => {
         if (boundingBoxIds.length < 1) {
-            setBoundingBoxIds(prevBoundingBoxIds => [...prevBoundingBoxIds, 1]);
+          setBoundingBoxIds(prevBoundingBoxIds => [...prevBoundingBoxIds, 1]);
         } else {
-            const id = boundingBoxIds[boundingBoxIds.length - 1] + 1;
-            setBoundingBoxIds(prevBoundingBoxIds => [...prevBoundingBoxIds, id]);
+          const id = boundingBoxIds[boundingBoxIds.length - 1] + 1;
+          setBoundingBoxIds(prevBoundingBoxIds => [...prevBoundingBoxIds, id]);
         }
-    }
+      };
 
     
 
